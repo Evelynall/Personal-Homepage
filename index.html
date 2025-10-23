@@ -122,12 +122,39 @@
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
+        /* 修改：将名片与联系方式并排，联系方式竖向排列在右侧 */
         .contact-links {
             display: flex;
             align-items: center;
-            gap: 16px;
+            /* 垂直对齐名片与按钮列 */
+            gap: 18px;
             margin-top: 16px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+        }
+
+        .card-side {
+            flex: 1 1 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .business-card {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .contact-column {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 64px;
+            /* 固定列宽，保证竖向排列 */
         }
 
         .contact-link {
@@ -302,9 +329,17 @@
                 font-size: 12px;
             }
 
+            /* 在窄屏上将名片和联系方式改为竖向堆叠，按钮改为横向排列以节省空间 */
             .contact-links {
-                justify-content: center;
+                flex-direction: column;
+                align-items: center;
                 gap: 12px;
+            }
+
+            .contact-column {
+                flex-direction: row;
+                gap: 10px;
+                flex: 0 0 auto;
             }
 
             .contact-link {
@@ -339,21 +374,32 @@
             <p class="description">
                 这里可以写一段关于你自己的简短介绍，描述你的兴趣爱好、职业或者其他你想分享的内容。
             </p>
+
+            <!-- 修改后的名片与联系方式：名片在左，联系方式竖向排列在右 -->
             <div class="contact-links">
-                <img src="https://cdnjson.com/images/2023/03/12/image8749fd86705e58b5.png" alt="名片" width="90%">
-                <a href="#" class="contact-link" target="_blank" rel="noopener noreferrer" aria-label="邮箱" title="邮箱">
-                    <span class="contact-icon">📧</span>
-                </a>
-                <a href="#" class="contact-link" target="_blank" rel="noopener noreferrer" aria-label="微信" title="微信">
-                    <span class="contact-icon">💬</span>
-                </a>
-                <a href="#" class="contact-link" target="_blank" rel="noopener noreferrer" aria-label="GitHub"
-                    title="GitHub">
-                    <span class="contact-icon">🐙</span>
-                </a>
-                <a href="#" class="contact-link" target="_blank" rel="noopener noreferrer" aria-label="微博" title="微博">
-                    <span class="contact-icon">📱</span>
-                </a>
+                <div class="card-side">
+                    <img src="https://cdnjson.com/images/2023/03/12/image8749fd86705e58b5.png" alt="名片"
+                        class="business-card">
+                </div>
+
+                <div class="contact-column" role="navigation" aria-label="联系方式">
+                    <a href="#" class="contact-link" target="_blank" rel="noopener noreferrer" aria-label="邮箱"
+                        title="邮箱">
+                        <span class="contact-icon">📧</span>
+                    </a>
+                    <a href="#" class="contact-link" target="_blank" rel="noopener noreferrer" aria-label="微信"
+                        title="微信">
+                        <span class="contact-icon">💬</span>
+                    </a>
+                    <a href="#" class="contact-link" target="_blank" rel="noopener noreferrer" aria-label="GitHub"
+                        title="GitHub">
+                        <span class="contact-icon">🐙</span>
+                    </a>
+                    <a href="#" class="contact-link" target="_blank" rel="noopener noreferrer" aria-label="微博"
+                        title="微博">
+                        <span class="contact-icon">📱</span>
+                    </a>
+                </div>
             </div>
         </div>
 
