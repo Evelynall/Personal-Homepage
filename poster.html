@@ -55,7 +55,7 @@
         main {
             position: relative;
             z-index: 1;
-            width: min(960px, 100%);
+            width: min(1080px, 100%);
         }
 
         .poster-page {
@@ -83,6 +83,7 @@
         .poster-carousel {
             position: relative;
             width: 100%;
+            overflow: hidden;
         }
 
         .poster-carousel::before,
@@ -91,48 +92,39 @@
             position: absolute;
             top: 0;
             bottom: 0;
-            width: clamp(40px, 8vw, 96px);
+            width: clamp(36px, 8vw, 120px);
             pointer-events: none;
             z-index: 2;
         }
 
         .poster-carousel::before {
-            left: -4px;
-            background: linear-gradient(to right, rgba(4, 7, 18, 0.7), rgba(4, 7, 18, 0));
+            left: 0;
+            background: linear-gradient(to right, rgba(4, 7, 18, 0.85), rgba(4, 7, 18, 0));
         }
 
         .poster-carousel::after {
-            right: -4px;
-            background: linear-gradient(to left, rgba(4, 7, 18, 0.7), rgba(4, 7, 18, 0));
+            right: 0;
+            background: linear-gradient(to left, rgba(4, 7, 18, 0.85), rgba(4, 7, 18, 0));
         }
 
         .poster-track {
             display: flex;
             gap: clamp(18px, 3vw, 32px);
             overflow-x: auto;
-            padding: clamp(16px, 3vw, 28px) clamp(10px, 2vw, 18px) clamp(28px, 4vw, 44px);
+            padding: clamp(18px, 3vw, 30px) 0 clamp(30px, 4vw, 48px);
             scroll-snap-type: x proximity;
-            scroll-padding: clamp(18px, 3vw, 32px);
-            scrollbar-width: thin;
-            scrollbar-color: rgba(170, 182, 255, 0.3) transparent;
+            scroll-padding-inline: clamp(18px, 3vw, 32px);
+            scrollbar-width: none;
             -webkit-overflow-scrolling: touch;
+            width: 100%;
+        }
+
+        .poster-track::-webkit-scrollbar {
+            display: none;
         }
 
         .poster-track:focus {
             outline: none;
-        }
-
-        .poster-track::-webkit-scrollbar {
-            height: 6px;
-        }
-
-        .poster-track::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .poster-track::-webkit-scrollbar-thumb {
-            background: rgba(170, 182, 255, 0.35);
-            border-radius: 999px;
         }
 
         .poster-card {
@@ -225,7 +217,7 @@
 
         .poster-modal__panel {
             position: relative;
-            width: min(90vw, 440px);
+            width: min(92vw, 440px);
             aspect-ratio: 9 / 16;
             border-radius: clamp(18px, 3vw, 26px);
             overflow: hidden;
@@ -311,7 +303,7 @@
 
             .poster-carousel::before,
             .poster-carousel::after {
-                width: clamp(24px, 12vw, 72px);
+                width: clamp(28px, 12vw, 80px);
             }
         }
 
@@ -322,7 +314,7 @@
             }
 
             .poster-track {
-                padding-bottom: clamp(24px, 8vw, 38px);
+                padding-bottom: clamp(26px, 8vw, 42px);
             }
 
             .poster-footnote {
@@ -330,7 +322,7 @@
             }
 
             .poster-modal__panel {
-                width: min(92vw, 360px);
+                width: min(94vw, 360px);
                 border-radius: clamp(16px, 6vw, 22px);
             }
         }
@@ -348,7 +340,7 @@
 <body>
     <main class="poster-page">
         <h1 class="poster-title">海报</h1>
-        <p class="interaction-hint">横向滑动卡片浏览精选海报，点击任意卡片即可展开查看介绍</p>
+        <p class="interaction-hint">横向滑动卡片浏览精选海报，卡片自动向左滚动，悬停可暂停并点击展开介绍</p>
         <section class="poster-carousel" aria-label="精选海报">
             <div class="poster-track" role="list">
                 <article class="poster-card" role="listitem" tabindex="0"
@@ -413,7 +405,7 @@
                 </article>
             </div>
         </section>
-        <p class="poster-footnote">提示：横向滚动或使用触控滑动浏览海报，按「Esc」可关闭展开内容</p>
+        <p class="poster-footnote">提示：卡片自动向左滚动，悬停或触控即可暂停，并可点击查看详细介绍，按「Esc」关闭弹窗</p>
     </main>
 
     <div class="poster-modal" aria-hidden="true" role="dialog" aria-modal="true"
@@ -430,14 +422,64 @@
 
     <script>
         (function () {
-            const cards = Array.from(document.querySelectorAll('.poster-card'));
+            const AUTO_SCROLL_SPEED = 0.45;
+            const track = document.querySelector('.poster-track');
             const modal = document.querySelector('.poster-modal');
             const modalImage = modal.querySelector('.poster-modal__image');
             const modalTitle = modal.querySelector('.poster-modal__title');
             const modalDescription = modal.querySelector('.poster-modal__description');
             const modalClose = modal.querySelector('.poster-modal__close');
             const body = document.body;
+            const initialCards = Array.from(track.querySelectorAll('.poster-card[role="listitem"]'));
+            let isHovering = false;
+            let isModalOpen = false;
             let lastFocusedCard = null;
+            let baseSectionWidth = 0;
+
+            initialCards.forEach((card, index) => {
+                card.dataset.baseIndex = String(index);
+            });
+
+            function bindCard(card) {
+                card.addEventListener('click', () => openModal(card));
+
+                if (card.tabIndex >= 0) {
+                    card.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            openModal(card);
+                        }
+                    });
+
+                    card.addEventListener('focus', () => {
+                        isHovering = true;
+                        card.scrollIntoView({
+                            behavior: 'smooth',
+                            inline: 'center',
+                            block: 'nearest'
+                        });
+                    });
+                }
+            }
+
+            function duplicateCards() {
+                initialCards.forEach((card) => {
+                    const clone = card.cloneNode(true);
+                    clone.setAttribute('aria-hidden', 'true');
+                    clone.setAttribute('tabindex', '-1');
+                    clone.setAttribute('role', 'presentation');
+                    clone.dataset.baseIndex = card.dataset.baseIndex;
+                    track.appendChild(clone);
+                    bindCard(clone);
+                });
+            }
+
+            function updateBaseWidth() {
+                baseSectionWidth = track.scrollWidth / 2;
+                if (track.scrollLeft >= baseSectionWidth) {
+                    track.scrollLeft -= baseSectionWidth;
+                }
+            }
 
             function openModal(card) {
                 const title = card.dataset.title || card.getAttribute('aria-label') || '海报';
@@ -451,18 +493,25 @@
                 modal.classList.add('is-open');
                 modal.setAttribute('aria-hidden', 'false');
                 body.classList.add('modal-open');
+                isModalOpen = true;
 
                 requestAnimationFrame(() => {
                     modalClose.focus();
                 });
 
-                lastFocusedCard = card;
+                if (card.tabIndex >= 0) {
+                    lastFocusedCard = card;
+                } else {
+                    const baseIndex = Number(card.dataset.baseIndex ?? -1);
+                    lastFocusedCard = (baseIndex >= 0 && initialCards[baseIndex]) ? initialCards[baseIndex] : (initialCards[0] || null);
+                }
             }
 
             function closeModal() {
                 modal.classList.remove('is-open');
                 modal.setAttribute('aria-hidden', 'true');
                 body.classList.remove('modal-open');
+                isModalOpen = false;
 
                 if (lastFocusedCard) {
                     lastFocusedCard.focus();
@@ -470,24 +519,23 @@
                 }
             }
 
-            cards.forEach((card) => {
-                card.addEventListener('click', () => openModal(card));
-
-                card.addEventListener('keydown', (event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        openModal(card);
+            function setupAutoScroll() {
+                function step() {
+                    if (!isHovering && !isModalOpen && baseSectionWidth > 0) {
+                        track.scrollLeft += AUTO_SCROLL_SPEED;
+                        if (track.scrollLeft >= baseSectionWidth) {
+                            track.scrollLeft -= baseSectionWidth;
+                        }
                     }
-                });
+                    requestAnimationFrame(step);
+                }
+                requestAnimationFrame(step);
+            }
 
-                card.addEventListener('focus', () => {
-                    card.scrollIntoView({
-                        behavior: 'smooth',
-                        inline: 'center',
-                        block: 'nearest'
-                    });
-                });
-            });
+            initialCards.forEach(bindCard);
+            duplicateCards();
+            updateBaseWidth();
+            setupAutoScroll();
 
             modalClose.addEventListener('click', closeModal);
 
@@ -502,6 +550,36 @@
                     event.preventDefault();
                     closeModal();
                 }
+            });
+
+            track.addEventListener('mouseenter', () => {
+                isHovering = true;
+            });
+
+            track.addEventListener('mouseleave', () => {
+                isHovering = false;
+            });
+
+            track.addEventListener('touchstart', () => {
+                isHovering = true;
+            }, { passive: true });
+
+            track.addEventListener('touchend', () => {
+                isHovering = false;
+            });
+
+            track.addEventListener('touchcancel', () => {
+                isHovering = false;
+            });
+
+            track.addEventListener('focusout', (event) => {
+                if (!track.contains(event.relatedTarget)) {
+                    isHovering = false;
+                }
+            });
+
+            window.addEventListener('resize', () => {
+                requestAnimationFrame(updateBaseWidth);
             });
         })();
     </script>
