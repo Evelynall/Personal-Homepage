@@ -122,12 +122,30 @@
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
+        .contact-section {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            margin-top: 16px;
+        }
+
+        .business-card {
+            flex: 1;
+            width: 100%;
+            max-width: 100%;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.02);
+            object-fit: cover;
+            display: block;
+        }
+
         .contact-links {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 16px;
-            margin-top: 16px;
-            flex-wrap: wrap;
+            gap: 14px;
+            flex-shrink: 0;
         }
 
         .contact-link {
@@ -302,7 +320,18 @@
                 font-size: 12px;
             }
 
+            .contact-section {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .business-card {
+                max-width: 100%;
+            }
+
             .contact-links {
+                flex-direction: row;
+                flex-wrap: wrap;
                 justify-content: center;
                 gap: 12px;
             }
@@ -339,21 +368,23 @@
             <p class="description">
                 这里可以写一段关于你自己的简短介绍，描述你的兴趣爱好、职业或者其他你想分享的内容。
             </p>
-            <div class="contact-links">
-                <img src="https://cdnjson.com/images/2023/03/12/image8749fd86705e58b5.png" alt="名片" width="90%">
-                <a href="#" class="contact-link" target="_blank" rel="noopener noreferrer" aria-label="邮箱" title="邮箱">
-                    <span class="contact-icon">📧</span>
-                </a>
-                <a href="#" class="contact-link" target="_blank" rel="noopener noreferrer" aria-label="微信" title="微信">
-                    <span class="contact-icon">💬</span>
-                </a>
-                <a href="#" class="contact-link" target="_blank" rel="noopener noreferrer" aria-label="GitHub"
-                    title="GitHub">
-                    <span class="contact-icon">🐙</span>
-                </a>
-                <a href="#" class="contact-link" target="_blank" rel="noopener noreferrer" aria-label="微博" title="微博">
-                    <span class="contact-icon">📱</span>
-                </a>
+            <div class="contact-section">
+                <img src="https://cdnjson.com/images/2023/03/12/image8749fd86705e58b5.png" alt="名片" class="business-card">
+                <div class="contact-links">
+                    <a href="#" class="contact-link" target="_blank" rel="noopener noreferrer" aria-label="邮箱" title="邮箱">
+                        <span class="contact-icon">📧</span>
+                    </a>
+                    <a href="#" class="contact-link" target="_blank" rel="noopener noreferrer" aria-label="微信" title="微信">
+                        <span class="contact-icon">💬</span>
+                    </a>
+                    <a href="#" class="contact-link" target="_blank" rel="noopener noreferrer" aria-label="GitHub"
+                        title="GitHub">
+                        <span class="contact-icon">🐙</span>
+                    </a>
+                    <a href="#" class="contact-link" target="_blank" rel="noopener noreferrer" aria-label="微博" title="微博">
+                        <span class="contact-icon">📱</span>
+                    </a>
+                </div>
             </div>
         </div>
 
