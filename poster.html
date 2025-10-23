@@ -55,7 +55,7 @@
         main {
             position: relative;
             z-index: 1;
-            width: min(960px, 100%);
+            width: 100%;
         }
 
         .poster-page {
@@ -64,6 +64,7 @@
             align-items: center;
             text-align: center;
             gap: clamp(14px, 2vw, 28px);
+            width: 100%;
         }
 
         .poster-title {
@@ -111,11 +112,9 @@
             gap: clamp(18px, 3vw, 32px);
             overflow-x: auto;
             padding: clamp(16px, 3vw, 28px) clamp(10px, 2vw, 18px) clamp(28px, 4vw, 44px);
-            scroll-snap-type: x proximity;
-            scroll-padding: clamp(18px, 3vw, 32px);
-            scrollbar-width: thin;
-            scrollbar-color: rgba(170, 182, 255, 0.3) transparent;
+            scrollbar-width: none;
             -webkit-overflow-scrolling: touch;
+            scroll-behavior: auto;
         }
 
         .poster-track:focus {
@@ -123,16 +122,7 @@
         }
 
         .poster-track::-webkit-scrollbar {
-            height: 6px;
-        }
-
-        .poster-track::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .poster-track::-webkit-scrollbar-thumb {
-            background: rgba(170, 182, 255, 0.35);
-            border-radius: 999px;
+            display: none;
         }
 
         .poster-card {
@@ -430,16 +420,29 @@
 
     <script>
         (function () {
-            const cards = Array.from(document.querySelectorAll('.poster-card'));
+            const carousel = document.querySelector('.poster-carousel');
+            const track = carousel ? carousel.querySelector('.poster-track') : null;
             const modal = document.querySelector('.poster-modal');
+
+            if (!carousel || !track || !modal) {
+                return;
+            }
+
             const modalImage = modal.querySelector('.poster-modal__image');
             const modalTitle = modal.querySelector('.poster-modal__title');
             const modalDescription = modal.querySelector('.poster-modal__description');
             const modalClose = modal.querySelector('.poster-modal__close');
             const body = document.body;
-            let lastFocusedCard = null;
 
-            function openModal(card) {
+            const baseCards = Array.from(track.querySelectorAll('.poster-card'));
+            let lastFocusedCard = null;
+            let isModalOpen = false;
+            let isHovering = false;
+            let lastTimestamp = null;
+            let baseContentWidth = 0;
+            const scrollSpeed = 0.28;
+
+            function openModal(card, focusTarget) {
                 const title = card.dataset.title || card.getAttribute('aria-label') || '海报';
                 const description = card.dataset.description || '';
                 const image = card.dataset.image || '';
@@ -451,18 +454,21 @@
                 modal.classList.add('is-open');
                 modal.setAttribute('aria-hidden', 'false');
                 body.classList.add('modal-open');
+                isModalOpen = true;
 
                 requestAnimationFrame(() => {
                     modalClose.focus();
                 });
 
-                lastFocusedCard = card;
+                lastFocusedCard = focusTarget || card;
             }
 
             function closeModal() {
                 modal.classList.remove('is-open');
                 modal.setAttribute('aria-hidden', 'true');
                 body.classList.remove('modal-open');
+                isModalOpen = false;
+                lastTimestamp = null;
 
                 if (lastFocusedCard) {
                     lastFocusedCard.focus();
@@ -470,23 +476,93 @@
                 }
             }
 
-            cards.forEach((card) => {
-                card.addEventListener('click', () => openModal(card));
+            function attachCardEvents(card, options = {}) {
+                const { isClone = false, focusTarget = card } = options;
 
-                card.addEventListener('keydown', (event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        openModal(card);
-                    }
-                });
+                card.addEventListener('click', () => openModal(card, focusTarget));
 
-                card.addEventListener('focus', () => {
-                    card.scrollIntoView({
-                        behavior: 'smooth',
-                        inline: 'center',
-                        block: 'nearest'
+                if (!isClone) {
+                    card.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            openModal(card, focusTarget);
+                        }
                     });
+
+                    card.addEventListener('focus', () => {
+                        card.scrollIntoView({
+                            behavior: 'smooth',
+                            inline: 'center',
+                            block: 'nearest'
+                        });
+                    });
+                }
+            }
+
+            baseCards.forEach((card) => {
+                attachCardEvents(card, { focusTarget: card });
+            });
+
+            let hasLoopContent = false;
+
+            if (baseCards.length) {
+                const fragment = document.createDocumentFragment();
+
+                baseCards.forEach((card, index) => {
+                    const clone = card.cloneNode(true);
+                    clone.classList.add('poster-card--clone');
+                    clone.setAttribute('tabindex', '-1');
+                    clone.setAttribute('aria-hidden', 'true');
+                    attachCardEvents(clone, { isClone: true, focusTarget: baseCards[index] });
+                    fragment.appendChild(clone);
                 });
+
+                track.appendChild(fragment);
+                hasLoopContent = true;
+            }
+
+            baseContentWidth = hasLoopContent ? track.scrollWidth / 2 : track.scrollWidth;
+            track.scrollLeft = 0;
+
+            function autoScroll(timestamp) {
+                if (!lastTimestamp) {
+                    lastTimestamp = timestamp;
+                }
+
+                const delta = timestamp - lastTimestamp;
+                lastTimestamp = timestamp;
+
+                if (!isHovering && !isModalOpen && baseContentWidth > track.clientWidth) {
+                    track.scrollLeft += delta * scrollSpeed;
+
+                    while (track.scrollLeft >= baseContentWidth) {
+                        track.scrollLeft -= baseContentWidth;
+                    }
+                }
+
+                requestAnimationFrame(autoScroll);
+            }
+
+            requestAnimationFrame(autoScroll);
+
+            function setHoveringState(state) {
+                isHovering = state;
+                if (!state) {
+                    lastTimestamp = null;
+                }
+            }
+
+            carousel.addEventListener('mouseenter', () => setHoveringState(true));
+            carousel.addEventListener('mouseleave', () => setHoveringState(false));
+            carousel.addEventListener('touchstart', () => setHoveringState(true), { passive: true });
+            carousel.addEventListener('touchend', () => setHoveringState(false), { passive: true });
+            carousel.addEventListener('touchcancel', () => setHoveringState(false), { passive: true });
+
+            track.addEventListener('focusin', () => setHoveringState(true));
+            track.addEventListener('focusout', (event) => {
+                if (!track.contains(event.relatedTarget)) {
+                    setHoveringState(false);
+                }
             });
 
             modalClose.addEventListener('click', closeModal);
