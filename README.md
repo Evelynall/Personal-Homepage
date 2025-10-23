@@ -36,8 +36,8 @@
 
 ### 海报展示页面
 - 页面文件：`poster.html`
-- 修改每个 `.poster-card` 中的背景图、标题和描述即可更新海报内容
-- 如果需要微调扇形展开效果，可调整页面底部脚本中的 `angleGap`、`offsetGap` 等参数
+- 修改每个 `.poster-card` 的 `data-title`、`data-description`、`data-image` 属性即可更新海报内容
+- 如需调整横向排列效果，可修改 CSS 中的 `--card-width`、间距或滚动相关样式
 
 ## 浏览器支持
 

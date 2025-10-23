@@ -15,7 +15,7 @@
             --card-width: clamp(180px, 22vw, 240px);
             --card-radius: 22px;
             --title-color: #f7f8ff;
-            --muted-color: rgba(244, 246, 255, 0.7);
+            --muted-color: rgba(244, 246, 255, 0.72);
         }
 
         * {
@@ -48,9 +48,14 @@
             z-index: 0;
         }
 
+        body.modal-open {
+            overflow: hidden;
+        }
+
         main {
             position: relative;
             z-index: 1;
+            width: min(960px, 100%);
         }
 
         .poster-page {
@@ -59,7 +64,6 @@
             align-items: center;
             text-align: center;
             gap: clamp(14px, 2vw, 28px);
-            width: min(960px, 100%);
         }
 
         .poster-title {
@@ -76,52 +80,78 @@
             text-shadow: 0 12px 24px rgba(2, 6, 22, 0.4);
         }
 
-        .card-stack {
+        .poster-carousel {
             position: relative;
-            width: min(84vw, 520px);
-            height: calc(var(--card-width) * 1.95);
-            margin-top: clamp(12px, 3vw, 30px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            perspective: 1600px;
-            touch-action: pan-y;
-            user-select: none;
+            width: 100%;
         }
 
-        .card-stack::before {
+        .poster-carousel::before,
+        .poster-carousel::after {
             content: "";
             position: absolute;
-            width: 120%;
-            height: 120%;
-            max-width: 660px;
-            max-height: 660px;
-            background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.28), transparent 75%);
-            filter: blur(60px);
-            opacity: 0.5;
-            z-index: 0;
+            top: 0;
+            bottom: 0;
+            width: clamp(40px, 8vw, 96px);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .poster-carousel::before {
+            left: -4px;
+            background: linear-gradient(to right, rgba(4, 7, 18, 0.7), rgba(4, 7, 18, 0));
+        }
+
+        .poster-carousel::after {
+            right: -4px;
+            background: linear-gradient(to left, rgba(4, 7, 18, 0.7), rgba(4, 7, 18, 0));
+        }
+
+        .poster-track {
+            display: flex;
+            gap: clamp(18px, 3vw, 32px);
+            overflow-x: auto;
+            padding: clamp(16px, 3vw, 28px) clamp(10px, 2vw, 18px) clamp(28px, 4vw, 44px);
+            scroll-snap-type: x proximity;
+            scroll-padding: clamp(18px, 3vw, 32px);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(170, 182, 255, 0.3) transparent;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .poster-track:focus {
+            outline: none;
+        }
+
+        .poster-track::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .poster-track::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .poster-track::-webkit-scrollbar-thumb {
+            background: rgba(170, 182, 255, 0.35);
+            border-radius: 999px;
         }
 
         .poster-card {
-            --offset-x: 0px;
-            --offset-y: 0px;
-            --rotation: 0deg;
-            --scale: 1;
-            --card-filter: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: var(--card-width);
+            position: relative;
+            flex: 0 0 var(--card-width);
             aspect-ratio: 9 / 16;
             border-radius: var(--card-radius);
             overflow: hidden;
-            transform-origin: 50% 100%;
-            transform: translate(calc(-50% + var(--offset-x)), calc(-88% + var(--offset-y))) rotate(var(--rotation)) scale(var(--scale));
+            scroll-snap-align: center;
             background: linear-gradient(140deg, rgba(39, 54, 96, 0.85), rgba(15, 18, 28, 0.95));
-            box-shadow: 0 28px 60px rgba(5, 10, 32, 0.55);
-            transition: transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 0.5s ease, filter 0.5s ease;
-            filter: var(--card-filter, none);
-            cursor: grab;
+            box-shadow: 0 24px 50px rgba(5, 10, 32, 0.5);
+            cursor: pointer;
+            transition: transform 0.45s cubic-bezier(0.19, 1, 0.22, 1), box-shadow 0.45s ease;
+        }
+
+        .poster-card:hover,
+        .poster-card:focus-visible {
+            transform: translateY(-12px) scale(1.05);
+            box-shadow: 0 36px 80px rgba(5, 10, 32, 0.6);
         }
 
         .poster-card:focus-visible {
@@ -129,25 +159,10 @@
             outline-offset: 6px;
         }
 
-        .card-stack.is-dragging .poster-card {
-            transition: none;
-            cursor: grabbing;
-        }
-
-        .card-stack.has-expanded .poster-card:not(.expanded) {
-            filter: blur(3px) brightness(0.45);
-            pointer-events: none;
-        }
-
-        .poster-card.expanded {
-            transform: translate(-50%, -58%) scale(1.15);
-            box-shadow: 0 42px 100px rgba(5, 10, 32, 0.6);
-            cursor: default;
-        }
-
         .poster-face {
             position: absolute;
             inset: 0;
+            background-image: var(--poster-image);
             background-size: cover;
             background-position: center;
             display: flex;
@@ -159,96 +174,130 @@
             content: "";
             position: absolute;
             inset: 0;
-            background: linear-gradient(180deg, rgba(4, 7, 18, 0.05) 45%, rgba(4, 7, 18, 0.7) 100%);
-            transition: opacity 0.4s ease;
-        }
-
-        .poster-card.expanded .poster-face::after {
-            opacity: 0.2;
+            background: linear-gradient(180deg, rgba(4, 7, 18, 0) 40%, rgba(4, 7, 18, 0.78) 100%);
         }
 
         .poster-label {
-            position: absolute;
-            left: 20px;
-            right: 20px;
-            bottom: 22px;
-            font-size: clamp(1rem, 2.6vw, 1.35rem);
+            position: relative;
+            z-index: 1;
+            margin: 0 18px 18px;
+            padding: 12px 18px;
+            border-radius: 16px;
+            background: rgba(6, 12, 34, 0.68);
+            backdrop-filter: blur(18px);
+            font-size: clamp(1rem, 2.6vw, 1.18rem);
             font-weight: 600;
             letter-spacing: 0.12em;
             text-indent: 0.12em;
-            text-align: left;
-            color: #ffffff;
-            opacity: 0.92;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-            text-shadow: 0 12px 30px rgba(1, 5, 18, 0.75);
-        }
-
-        .poster-card.expanded .poster-label {
-            opacity: 0;
-        }
-
-        .poster-detail {
-            position: absolute;
-            inset: 0;
-            padding: clamp(22px, 4.5vw, 34px);
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            gap: 16px;
-            background: linear-gradient(180deg, rgba(3, 6, 18, 0) 30%, rgba(3, 6, 18, 0.82) 100%);
-            opacity: 0;
-            transform: translateY(24px);
-            transition: opacity 0.4s ease, transform 0.4s ease;
-            pointer-events: none;
-        }
-
-        .poster-card.expanded .poster-detail {
-            opacity: 1;
-            transform: translateY(0);
-            pointer-events: auto;
-        }
-
-        .poster-detail h2 {
-            font-size: clamp(1.4rem, 3vw, 2rem);
-            letter-spacing: 0.1em;
-            text-indent: 0.1em;
-        }
-
-        .poster-detail p {
-            font-size: clamp(0.95rem, 2.2vw, 1.1rem);
-            line-height: 1.7;
-            color: rgba(255, 255, 255, 0.82);
-        }
-
-        .detail-close {
-            position: absolute;
-            top: clamp(16px, 3vw, 24px);
-            right: clamp(16px, 3vw, 24px);
-            width: 36px;
-            height: 36px;
-            border-radius: 12px;
-            border: none;
-            background: rgba(255, 255, 255, 0.12);
-            color: #fff;
-            font-size: 1.3rem;
-            line-height: 1;
-            cursor: pointer;
-            transition: background 0.3s ease, transform 0.3s ease;
-        }
-
-        .detail-close:hover,
-        .detail-close:focus-visible {
-            background: rgba(255, 255, 255, 0.2);
-            transform: scale(1.03);
+            color: #fefbff;
+            box-shadow: 0 12px 34px rgba(2, 8, 24, 0.6);
         }
 
         .poster-footnote {
             margin-top: clamp(12px, 2vw, 24px);
             font-size: clamp(0.85rem, 1.8vw, 1rem);
-            color: rgba(240, 243, 255, 0.6);
+            color: rgba(240, 243, 255, 0.62);
             letter-spacing: 0.08em;
             text-indent: 0.08em;
+        }
+
+        .poster-modal {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(20px, 6vw, 60px);
+            background: rgba(4, 6, 18, 0.6);
+            backdrop-filter: blur(18px);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.35s ease, visibility 0.35s ease;
+            z-index: 10;
+        }
+
+        .poster-modal.is-open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .poster-modal__panel {
+            position: relative;
+            width: min(90vw, 440px);
+            aspect-ratio: 9 / 16;
+            border-radius: clamp(18px, 3vw, 26px);
+            overflow: hidden;
+            box-shadow: 0 40px 120px rgba(2, 6, 18, 0.65);
+            display: flex;
+            align-items: stretch;
+            justify-content: flex-end;
+        }
+
+        .poster-modal__image {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            transform: scale(1.02);
+        }
+
+        .poster-modal__image::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(3, 6, 18, 0) 35%, rgba(3, 6, 18, 0.82) 100%);
+        }
+
+        .poster-modal__content {
+            position: relative;
+            z-index: 1;
+            margin-top: auto;
+            padding: clamp(22px, 5vw, 32px);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(12px, 3vw, 18px);
+        }
+
+        .poster-modal__title {
+            font-size: clamp(1.6rem, 4vw, 2.2rem);
+            letter-spacing: 0.1em;
+            text-indent: 0.1em;
+        }
+
+        .poster-modal__description {
+            font-size: clamp(1rem, 2.4vw, 1.2rem);
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .poster-modal__close {
+            position: absolute;
+            top: clamp(14px, 3vw, 22px);
+            right: clamp(14px, 3vw, 22px);
+            width: 40px;
+            height: 40px;
+            border-radius: 14px;
+            border: none;
+            background: rgba(255, 255, 255, 0.14);
+            color: #fff;
+            font-size: 1.4rem;
+            line-height: 1;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.3s ease;
+        }
+
+        .poster-modal__close:hover,
+        .poster-modal__close:focus-visible {
+            background: rgba(255, 255, 255, 0.24);
+            transform: scale(1.04);
+        }
+
+        .poster-modal__close:focus-visible {
+            outline: 3px solid rgba(138, 174, 255, 0.7);
+            outline-offset: 4px;
         }
 
         @media (max-width: 720px) {
@@ -260,40 +309,36 @@
                 letter-spacing: 0.12em;
             }
 
-            .poster-card {
-                --card-radius: 18px;
-            }
-
-            .detail-close {
-                width: 34px;
-                height: 34px;
+            .poster-carousel::before,
+            .poster-carousel::after {
+                width: clamp(24px, 12vw, 72px);
             }
         }
 
         @media (max-width: 520px) {
-            .card-stack {
-                width: min(92vw, 420px);
-                height: calc(var(--card-width) * 2.1);
+            :root {
+                --card-width: clamp(160px, 60vw, 220px);
+                --card-radius: 20px;
             }
 
-            .poster-card {
-                transform: translate(calc(-50% + var(--offset-x)), calc(-90% + var(--offset-y))) rotate(var(--rotation)) scale(var(--scale));
-            }
-
-            .poster-card.expanded {
-                transform: translate(-50%, -60%) scale(1.12);
+            .poster-track {
+                padding-bottom: clamp(24px, 8vw, 38px);
             }
 
             .poster-footnote {
                 letter-spacing: 0.06em;
             }
+
+            .poster-modal__panel {
+                width: min(92vw, 360px);
+                border-radius: clamp(16px, 6vw, 22px);
+            }
         }
 
         @media (prefers-reduced-motion: reduce) {
             .poster-card,
-            .poster-card.expanded,
-            .poster-detail,
-            .detail-close {
+            .poster-modal,
+            .poster-modal__close {
                 transition: none !important;
             }
         }
@@ -303,277 +348,162 @@
 <body>
     <main class="poster-page">
         <h1 class="poster-title">海报</h1>
-        <p class="interaction-hint">左右滑动扇形卡片，点击任意卡片即可抽出查看海报介绍</p>
-        <section class="card-stack" aria-label="精选海报">
-            <article class="poster-card" tabindex="0" aria-expanded="false">
-                <div class="poster-face"
-                    style="background-image: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80');">
-                </div>
-                <div class="poster-label">星际旅人</div>
-                <div class="poster-detail" aria-hidden="true">
-                    <button class="detail-close" type="button" aria-label="关闭">×</button>
-                    <h2>星际旅人</h2>
-                    <p>穿越极光，用海报讲述冒险与探索的故事。</p>
-                </div>
-            </article>
-            <article class="poster-card" tabindex="0" aria-expanded="false">
-                <div class="poster-face"
-                    style="background-image: url('https://images.unsplash.com/photo-1496302662116-2cbf3e1590af?auto=format&fit=crop&w=800&q=80');">
-                </div>
-                <div class="poster-label">城市之光</div>
-                <div class="poster-detail" aria-hidden="true">
-                    <button class="detail-close" type="button" aria-label="关闭">×</button>
-                    <h2>城市之光</h2>
-                    <p>霓虹勾勒夜色，记录城市的节奏、温度与呼吸。</p>
-                </div>
-            </article>
-            <article class="poster-card" tabindex="0" aria-expanded="false">
-                <div class="poster-face"
-                    style="background-image: url('https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=800&q=80');">
-                </div>
-                <div class="poster-label">自然回响</div>
-                <div class="poster-detail" aria-hidden="true">
-                    <button class="detail-close" type="button" aria-label="关闭">×</button>
-                    <h2>自然回响</h2>
-                    <p>森林与海洋的呼吸，为你唤醒关于自然的温柔记忆。</p>
-                </div>
-            </article>
-            <article class="poster-card" tabindex="0" aria-expanded="false">
-                <div class="poster-face"
-                    style="background-image: url('https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80');">
-                </div>
-                <div class="poster-label">未来信号</div>
-                <div class="poster-detail" aria-hidden="true">
-                    <button class="detail-close" type="button" aria-label="关闭">×</button>
-                    <h2>未来信号</h2>
-                    <p>光影与数据交织成节奏，传递关于未来的无限想象。</p>
-                </div>
-            </article>
-            <article class="poster-card" tabindex="0" aria-expanded="false">
-                <div class="poster-face"
-                    style="background-image: url('https://images.unsplash.com/photo-1526481280695-3c46977c6af7?auto=format&fit=crop&w=800&q=80');">
-                </div>
-                <div class="poster-label">复古情书</div>
-                <div class="poster-detail" aria-hidden="true">
-                    <button class="detail-close" type="button" aria-label="关闭">×</button>
-                    <h2>复古情书</h2>
-                    <p>褪色的胶片质感，记录时光深处的柔软与浪漫。</p>
-                </div>
-            </article>
-            <article class="poster-card" tabindex="0" aria-expanded="false">
-                <div class="poster-face"
-                    style="background-image: url('https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=800&q=80');">
-                </div>
-                <div class="poster-label">微光剧场</div>
-                <div class="poster-detail" aria-hidden="true">
-                    <button class="detail-close" type="button" aria-label="关闭">×</button>
-                    <h2>微光剧场</h2>
-                    <p>灯光缓缓亮起，每一张海报都是一场沉浸式的开场。</p>
-                </div>
-            </article>
+        <p class="interaction-hint">横向滑动卡片浏览精选海报，点击任意卡片即可展开查看介绍</p>
+        <section class="poster-carousel" aria-label="精选海报">
+            <div class="poster-track" role="list">
+                <article class="poster-card" role="listitem" tabindex="0"
+                    aria-label="星际旅人"
+                    data-title="星际旅人"
+                    data-description="穿越极光，用海报讲述冒险与探索的故事。"
+                    data-image="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&amp;fit=crop&amp;w=800&amp;q=80"
+                    style="--poster-image: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80');">
+                    <div class="poster-face" aria-hidden="true">
+                        <span class="poster-label">星际旅人</span>
+                    </div>
+                </article>
+                <article class="poster-card" role="listitem" tabindex="0"
+                    aria-label="城市之光"
+                    data-title="城市之光"
+                    data-description="霓虹勾勒夜色，记录城市的节奏、温度与呼吸。"
+                    data-image="https://images.unsplash.com/photo-1496302662116-2cbf3e1590af?auto=format&amp;fit=crop&amp;w=800&amp;q=80"
+                    style="--poster-image: url('https://images.unsplash.com/photo-1496302662116-2cbf3e1590af?auto=format&fit=crop&w=800&q=80');">
+                    <div class="poster-face" aria-hidden="true">
+                        <span class="poster-label">城市之光</span>
+                    </div>
+                </article>
+                <article class="poster-card" role="listitem" tabindex="0"
+                    aria-label="自然回响"
+                    data-title="自然回响"
+                    data-description="森林与海洋的呼吸，为你唤醒关于自然的温柔记忆。"
+                    data-image="https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&amp;fit=crop&amp;w=800&amp;q=80"
+                    style="--poster-image: url('https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=800&q=80');">
+                    <div class="poster-face" aria-hidden="true">
+                        <span class="poster-label">自然回响</span>
+                    </div>
+                </article>
+                <article class="poster-card" role="listitem" tabindex="0"
+                    aria-label="未来信号"
+                    data-title="未来信号"
+                    data-description="光影与数据交织成节奏，传递关于未来的无限想象。"
+                    data-image="https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&amp;fit=crop&amp;w=800&amp;q=80"
+                    style="--poster-image: url('https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80');">
+                    <div class="poster-face" aria-hidden="true">
+                        <span class="poster-label">未来信号</span>
+                    </div>
+                </article>
+                <article class="poster-card" role="listitem" tabindex="0"
+                    aria-label="复古情书"
+                    data-title="复古情书"
+                    data-description="褪色的胶片质感，记录时光深处的柔软与浪漫。"
+                    data-image="https://images.unsplash.com/photo-1526481280695-3c46977c6af7?auto=format&amp;fit=crop&amp;w=800&amp;q=80"
+                    style="--poster-image: url('https://images.unsplash.com/photo-1526481280695-3c46977c6af7?auto=format&fit=crop&w=800&q=80');">
+                    <div class="poster-face" aria-hidden="true">
+                        <span class="poster-label">复古情书</span>
+                    </div>
+                </article>
+                <article class="poster-card" role="listitem" tabindex="0"
+                    aria-label="微光剧场"
+                    data-title="微光剧场"
+                    data-description="灯光缓缓亮起，每一张海报都是一场沉浸式的开场。"
+                    data-image="https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&amp;fit=crop&amp;w=800&amp;q=80"
+                    style="--poster-image: url('https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=800&q=80');">
+                    <div class="poster-face" aria-hidden="true">
+                        <span class="poster-label">微光剧场</span>
+                    </div>
+                </article>
+            </div>
         </section>
-        <p class="poster-footnote">提示：您可以按「←」「→」键切换扇面，按「Esc」关闭展开的海报</p>
+        <p class="poster-footnote">提示：横向滚动或使用触控滑动浏览海报，按「Esc」可关闭展开内容</p>
     </main>
+
+    <div class="poster-modal" aria-hidden="true" role="dialog" aria-modal="true"
+        aria-labelledby="poster-modal-title" aria-describedby="poster-modal-description">
+        <div class="poster-modal__panel">
+            <div class="poster-modal__image"></div>
+            <div class="poster-modal__content">
+                <h2 class="poster-modal__title" id="poster-modal-title">海报</h2>
+                <p class="poster-modal__description" id="poster-modal-description">精选海报介绍</p>
+            </div>
+            <button class="poster-modal__close" type="button" aria-label="关闭">×</button>
+        </div>
+    </div>
+
     <script>
-        const stack = document.querySelector('.card-stack');
-        const cards = Array.from(stack.querySelectorAll('.poster-card'));
-        const rotationLimit = 22;
-        const angleGap = 10;
-        const offsetGap = 46;
-        const liftGap = 24;
-        const pointerState = { active: false, startX: 0, startRotation: 0, pointerId: null };
-        let rotation = 0;
-        let activeCard = null;
-        let suppressClick = false;
+        (function () {
+            const cards = Array.from(document.querySelectorAll('.poster-card'));
+            const modal = document.querySelector('.poster-modal');
+            const modalImage = modal.querySelector('.poster-modal__image');
+            const modalTitle = modal.querySelector('.poster-modal__title');
+            const modalDescription = modal.querySelector('.poster-modal__description');
+            const modalClose = modal.querySelector('.poster-modal__close');
+            const body = document.body;
+            let lastFocusedCard = null;
 
-        const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+            function openModal(card) {
+                const title = card.dataset.title || card.getAttribute('aria-label') || '海报';
+                const description = card.dataset.description || '';
+                const image = card.dataset.image || '';
 
-        function updateCards() {
-            const total = cards.length;
-            const centerIndex = (total - 1) / 2;
+                modalTitle.textContent = title;
+                modalDescription.textContent = description;
+                modalImage.style.backgroundImage = image ? `url('${image}')` : '';
 
-            cards.forEach((card, index) => {
-                if (card === activeCard) {
-                    card.style.setProperty('--offset-x', '0px');
-                    card.style.setProperty('--offset-y', '0px');
-                    card.style.setProperty('--rotation', '0deg');
-                    card.style.setProperty('--scale', '1.15');
-                    card.style.setProperty('--card-filter', 'none');
-                    card.style.zIndex = '800';
-                    return;
-                }
+                modal.classList.add('is-open');
+                modal.setAttribute('aria-hidden', 'false');
+                body.classList.add('modal-open');
 
-                const offset = index - centerIndex;
-                const angle = clamp(offset * angleGap + rotation, -48, 48);
-                const translateX = offset * offsetGap;
-                const translateY = -Math.abs(offset) * liftGap;
-                const scale = Math.max(0.82, 1 - Math.abs(offset) * 0.06);
-                const brightness = clamp(1 - Math.abs(offset) * 0.12, 0.55, 1);
-                const saturation = clamp(1 - Math.abs(offset) * 0.06, 0.65, 1);
-
-                card.style.setProperty('--offset-x', `${translateX}px`);
-                card.style.setProperty('--offset-y', `${translateY}px`);
-                card.style.setProperty('--rotation', `${angle}deg`);
-                card.style.setProperty('--scale', scale.toFixed(3));
-                card.style.setProperty('--card-filter', `brightness(${brightness.toFixed(2)}) saturate(${saturation.toFixed(2)})`);
-                card.style.zIndex = String(400 - Math.abs(Math.round(angle)) + index);
-            });
-
-            if (activeCard) {
-                stack.classList.add('has-expanded');
-            } else {
-                stack.classList.remove('has-expanded');
-            }
-        }
-
-        function collapseCard(card = activeCard) {
-            if (!card) {
-                return;
-            }
-            card.classList.remove('expanded');
-            card.setAttribute('aria-expanded', 'false');
-            const detail = card.querySelector('.poster-detail');
-            if (detail) {
-                detail.setAttribute('aria-hidden', 'true');
-            }
-            if (card === activeCard) {
-                activeCard = null;
-            }
-            updateCards();
-        }
-
-        function expandCard(card) {
-            if (card === activeCard) {
-                collapseCard(card);
-                return;
-            }
-
-            if (activeCard) {
-                collapseCard(activeCard);
-            }
-
-            activeCard = card;
-            card.classList.add('expanded');
-            card.setAttribute('aria-expanded', 'true');
-            const detail = card.querySelector('.poster-detail');
-            if (detail) {
-                detail.setAttribute('aria-hidden', 'false');
-            }
-            updateCards();
-        }
-
-        stack.addEventListener('pointerdown', (event) => {
-            if (activeCard) {
-                return;
-            }
-            pointerState.active = true;
-            pointerState.startX = event.clientX;
-            pointerState.startRotation = rotation;
-            pointerState.pointerId = event.pointerId;
-            suppressClick = false;
-            stack.classList.add('is-dragging');
-            stack.setPointerCapture(event.pointerId);
-        });
-
-        stack.addEventListener('pointermove', (event) => {
-            if (!pointerState.active) {
-                return;
-            }
-            const deltaX = event.clientX - pointerState.startX;
-            if (Math.abs(deltaX) > 6) {
-                suppressClick = true;
-            }
-            rotation = clamp(pointerState.startRotation + deltaX * 0.12, -rotationLimit, rotationLimit);
-            updateCards();
-        });
-
-        const endPointer = (event) => {
-            if (!pointerState.active) {
-                return;
-            }
-            pointerState.active = false;
-            stack.classList.remove('is-dragging');
-            try {
-                stack.releasePointerCapture(event.pointerId);
-            } catch (error) {
-            }
-        };
-
-        stack.addEventListener('pointerup', endPointer);
-        stack.addEventListener('pointercancel', endPointer);
-        stack.addEventListener('pointerleave', (event) => {
-            if (!pointerState.active) {
-                return;
-            }
-            endPointer(event);
-        });
-
-        cards.forEach((card) => {
-            const detail = card.querySelector('.poster-detail');
-            if (detail) {
-                detail.setAttribute('aria-hidden', 'true');
-            }
-
-            card.addEventListener('click', (event) => {
-                if (suppressClick) {
-                    suppressClick = false;
-                    return;
-                }
-                expandCard(card);
-            });
-
-            card.addEventListener('keydown', (event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    expandCard(card);
-                }
-                if (event.key === 'Escape' && card.classList.contains('expanded')) {
-                    event.preventDefault();
-                    collapseCard(card);
-                }
-            });
-
-            const closeButton = card.querySelector('.detail-close');
-            if (closeButton) {
-                closeButton.addEventListener('click', (event) => {
-                    event.stopPropagation();
-                    collapseCard(card);
+                requestAnimationFrame(() => {
+                    modalClose.focus();
                 });
-            }
-        });
 
-        stack.addEventListener('click', (event) => {
-            if (!activeCard) {
-                return;
+                lastFocusedCard = card;
             }
-            if (!event.target.closest('.poster-card.expanded')) {
-                collapseCard();
-            }
-        });
 
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && activeCard) {
-                collapseCard();
-                return;
-            }
-            if (activeCard) {
-                return;
-            }
-            if (event.key === 'ArrowLeft') {
-                rotation = clamp(rotation - angleGap, -rotationLimit, rotationLimit);
-                updateCards();
-            }
-            if (event.key === 'ArrowRight') {
-                rotation = clamp(rotation + angleGap, -rotationLimit, rotationLimit);
-                updateCards();
-            }
-        });
+            function closeModal() {
+                modal.classList.remove('is-open');
+                modal.setAttribute('aria-hidden', 'true');
+                body.classList.remove('modal-open');
 
-        window.addEventListener('resize', () => {
-            requestAnimationFrame(updateCards);
-        });
+                if (lastFocusedCard) {
+                    lastFocusedCard.focus();
+                    lastFocusedCard = null;
+                }
+            }
 
-        updateCards();
+            cards.forEach((card) => {
+                card.addEventListener('click', () => openModal(card));
+
+                card.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openModal(card);
+                    }
+                });
+
+                card.addEventListener('focus', () => {
+                    card.scrollIntoView({
+                        behavior: 'smooth',
+                        inline: 'center',
+                        block: 'nearest'
+                    });
+                });
+            });
+
+            modalClose.addEventListener('click', closeModal);
+
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    closeModal();
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && modal.classList.contains('is-open')) {
+                    event.preventDefault();
+                    closeModal();
+                }
+            });
+        })();
     </script>
 </body>
 
