@@ -40,7 +40,7 @@
             max-width: 1000px;
             width: 100%;
             grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-            align-items: start;
+            align-items: stretch;
             position: relative;
             z-index: 1;
         }
@@ -69,6 +69,7 @@
             flex-direction: column;
             gap: 20px;
             text-align: left;
+            height: 100%;
         }
 
         .profile-header {
@@ -153,12 +154,13 @@
             font-size: 20px;
         }
 
-        .links-card {
+        .links-section {
+            grid-column: 2 / 3;
             display: flex;
             flex-direction: column;
             gap: 20px;
-            grid-column: 2 / 3;
-            grid-row: 1 / 2;
+            align-self: stretch;
+            height: 100%;
         }
 
         .links-header {
@@ -177,6 +179,8 @@
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 16px;
+            flex: 1;
+            align-content: start;
         }
 
         .link-item {
@@ -184,16 +188,19 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 16px 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
+            padding: 20px 16px;
+            background: rgba(20, 20, 20, 0.65);
+            border-radius: 14px;
             text-decoration: none;
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255, 255, 255, 0.85);
             transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.12);
             text-align: center;
-            gap: 6px;
-            min-height: 120px;
+            gap: 8px;
+            min-height: 140px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
         }
 
         .link-item:hover {
@@ -231,7 +238,7 @@
                 grid-row: auto;
             }
 
-            .links-card {
+            .links-section {
                 grid-column: 1;
                 grid-row: auto;
             }
@@ -346,8 +353,8 @@
             </div>
         </div>
 
-        <!-- 更多链接卡片 -->
-        <div class="glass-card links-card">
+        <!-- 更多链接 -->
+        <div class="links-section">
             <div class="links-header">
                 <span class="links-title">📑 更多链接</span>
             </div>
