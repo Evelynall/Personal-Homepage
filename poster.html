@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>海报展示</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --page-bg: radial-gradient(circle at 20% 20%, rgba(98, 134, 255, 0.25), transparent 55%),
+                radial-gradient(circle at 80% 30%, rgba(255, 142, 235, 0.24), transparent 52%),
+                radial-gradient(circle at 50% 80%, rgba(255, 188, 134, 0.2), transparent 60%),
+                linear-gradient(160deg, #101427, #040610 70%, #02030a 100%);
+            --card-width: clamp(180px, 22vw, 240px);
+            --card-radius: 22px;
+            --title-color: #f7f8ff;
+            --muted-color: rgba(244, 246, 255, 0.72);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: var(--page-bg);
+            font-family: "HarmonyOS Sans", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--title-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(32px, 6vw, 72px) clamp(20px, 5vw, 96px);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: -40vh -40vw;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.08), transparent 65%);
+            filter: blur(120px);
+            opacity: 0.5;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        main {
+            position: relative;
+            z-index: 1;
+            width: min(960px, 100%);
+        }
+
+        .poster-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: clamp(14px, 2vw, 28px);
+        }
+
+        .poster-title {
+            font-size: clamp(2.8rem, 6vw, 4.4rem);
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-indent: 0.18em;
+            text-shadow: 0 30px 60px rgba(1, 4, 18, 0.55);
+        }
+
+        .interaction-hint {
+            font-size: clamp(0.95rem, 2vw, 1.15rem);
+            color: var(--muted-color);
+            text-shadow: 0 12px 24px rgba(2, 6, 22, 0.4);
+        }
+
+        .poster-carousel {
+            position: relative;
+            width: 100%;
+        }
+
+        .poster-carousel::before,
+        .poster-carousel::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: clamp(40px, 8vw, 96px);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .poster-carousel::before {
+            left: -4px;
+            background: linear-gradient(to right, rgba(4, 7, 18, 0.7), rgba(4, 7, 18, 0));
+        }
+
+        .poster-carousel::after {
+            right: -4px;
+            background: linear-gradient(to left, rgba(4, 7, 18, 0.7), rgba(4, 7, 18, 0));
+        }
+
+        .poster-track {
+            display: flex;
+            gap: clamp(18px, 3vw, 32px);
+            overflow-x: auto;
+            padding: clamp(16px, 3vw, 28px) clamp(10px, 2vw, 18px) clamp(28px, 4vw, 44px);
+            scroll-snap-type: x proximity;
+            scroll-padding: clamp(18px, 3vw, 32px);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(170, 182, 255, 0.3) transparent;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .poster-track:focus {
+            outline: none;
+        }
+
+        .poster-track::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .poster-track::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .poster-track::-webkit-scrollbar-thumb {
+            background: rgba(170, 182, 255, 0.35);
+            border-radius: 999px;
+        }
+
+        .poster-card {
+            position: relative;
+            flex: 0 0 var(--card-width);
+            aspect-ratio: 9 / 16;
+            border-radius: var(--card-radius);
+            overflow: hidden;
+            scroll-snap-align: center;
+            background: linear-gradient(140deg, rgba(39, 54, 96, 0.85), rgba(15, 18, 28, 0.95));
+            box-shadow: 0 24px 50px rgba(5, 10, 32, 0.5);
+            cursor: pointer;
+            transition: transform 0.45s cubic-bezier(0.19, 1, 0.22, 1), box-shadow 0.45s ease;
+        }
+
+        .poster-card:hover,
+        .poster-card:focus-visible {
+            transform: translateY(-12px) scale(1.05);
+            box-shadow: 0 36px 80px rgba(5, 10, 32, 0.6);
+        }
+
+        .poster-card:focus-visible {
+            outline: 3px solid rgba(138, 174, 255, 0.7);
+            outline-offset: 6px;
+        }
+
+        .poster-face {
+            position: absolute;
+            inset: 0;
+            background-image: var(--poster-image);
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .poster-face::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(4, 7, 18, 0) 40%, rgba(4, 7, 18, 0.78) 100%);
+        }
+
+        .poster-label {
+            position: relative;
+            z-index: 1;
+            margin: 0 18px 18px;
+            padding: 12px 18px;
+            border-radius: 16px;
+            background: rgba(6, 12, 34, 0.68);
+            backdrop-filter: blur(18px);
+            font-size: clamp(1rem, 2.6vw, 1.18rem);
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-indent: 0.12em;
+            color: #fefbff;
+            box-shadow: 0 12px 34px rgba(2, 8, 24, 0.6);
+        }
+
+        .poster-footnote {
+            margin-top: clamp(12px, 2vw, 24px);
+            font-size: clamp(0.85rem, 1.8vw, 1rem);
+            color: rgba(240, 243, 255, 0.62);
+            letter-spacing: 0.08em;
+            text-indent: 0.08em;
+        }
+
+        .poster-modal {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(20px, 6vw, 60px);
+            background: rgba(4, 6, 18, 0.6);
+            backdrop-filter: blur(18px);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.35s ease, visibility 0.35s ease;
+            z-index: 10;
+        }
+
+        .poster-modal.is-open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .poster-modal__panel {
+            position: relative;
+            width: min(90vw, 440px);
+            aspect-ratio: 9 / 16;
+            border-radius: clamp(18px, 3vw, 26px);
+            overflow: hidden;
+            box-shadow: 0 40px 120px rgba(2, 6, 18, 0.65);
+            display: flex;
+            align-items: stretch;
+            justify-content: flex-end;
+        }
+
+        .poster-modal__image {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            transform: scale(1.02);
+        }
+
+        .poster-modal__image::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(3, 6, 18, 0) 35%, rgba(3, 6, 18, 0.82) 100%);
+        }
+
+        .poster-modal__content {
+            position: relative;
+            z-index: 1;
+            margin-top: auto;
+            padding: clamp(22px, 5vw, 32px);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(12px, 3vw, 18px);
+        }
+
+        .poster-modal__title {
+            font-size: clamp(1.6rem, 4vw, 2.2rem);
+            letter-spacing: 0.1em;
+            text-indent: 0.1em;
+        }
+
+        .poster-modal__description {
+            font-size: clamp(1rem, 2.4vw, 1.2rem);
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .poster-modal__close {
+            position: absolute;
+            top: clamp(14px, 3vw, 22px);
+            right: clamp(14px, 3vw, 22px);
+            width: 40px;
+            height: 40px;
+            border-radius: 14px;
+            border: none;
+            background: rgba(255, 255, 255, 0.14);
+            color: #fff;
+            font-size: 1.4rem;
+            line-height: 1;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.3s ease;
+        }
+
+        .poster-modal__close:hover,
+        .poster-modal__close:focus-visible {
+            background: rgba(255, 255, 255, 0.24);
+            transform: scale(1.04);
+        }
+
+        .poster-modal__close:focus-visible {
+            outline: 3px solid rgba(138, 174, 255, 0.7);
+            outline-offset: 4px;
+        }
+
+        @media (max-width: 720px) {
+            body {
+                padding: clamp(28px, 8vw, 42px) clamp(16px, 6vw, 36px);
+            }
+
+            .poster-title {
+                letter-spacing: 0.12em;
+            }
+
+            .poster-carousel::before,
+            .poster-carousel::after {
+                width: clamp(24px, 12vw, 72px);
+            }
+        }
+
+        @media (max-width: 520px) {
+            :root {
+                --card-width: clamp(160px, 60vw, 220px);
+                --card-radius: 20px;
+            }
+
+            .poster-track {
+                padding-bottom: clamp(24px, 8vw, 38px);
+            }
+
+            .poster-footnote {
+                letter-spacing: 0.06em;
+            }
+
+            .poster-modal__panel {
+                width: min(92vw, 360px);
+                border-radius: clamp(16px, 6vw, 22px);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .poster-card,
+            .poster-modal,
+            .poster-modal__close {
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="poster-page">
+        <h1 class="poster-title">海报</h1>
+        <p class="interaction-hint">横向滑动卡片浏览精选海报，点击任意卡片即可展开查看介绍</p>
+        <section class="poster-carousel" aria-label="精选海报">
+            <div class="poster-track" role="list">
+                <article class="poster-card" role="listitem" tabindex="0"
+                    aria-label="星际旅人"
+                    data-title="星际旅人"
+                    data-description="穿越极光，用海报讲述冒险与探索的故事。"
+                    data-image="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&amp;fit=crop&amp;w=800&amp;q=80"
+                    style="--poster-image: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80');">
+                    <div class="poster-face" aria-hidden="true">
+                        <span class="poster-label">星际旅人</span>
+                    </div>
+                </article>
+                <article class="poster-card" role="listitem" tabindex="0"
+                    aria-label="城市之光"
+                    data-title="城市之光"
+                    data-description="霓虹勾勒夜色，记录城市的节奏、温度与呼吸。"
+                    data-image="https://images.unsplash.com/photo-1496302662116-2cbf3e1590af?auto=format&amp;fit=crop&amp;w=800&amp;q=80"
+                    style="--poster-image: url('https://images.unsplash.com/photo-1496302662116-2cbf3e1590af?auto=format&fit=crop&w=800&q=80');">
+                    <div class="poster-face" aria-hidden="true">
+                        <span class="poster-label">城市之光</span>
+                    </div>
+                </article>
+                <article class="poster-card" role="listitem" tabindex="0"
+                    aria-label="自然回响"
+                    data-title="自然回响"
+                    data-description="森林与海洋的呼吸，为你唤醒关于自然的温柔记忆。"
+                    data-image="https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&amp;fit=crop&amp;w=800&amp;q=80"
+                    style="--poster-image: url('https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=800&q=80');">
+                    <div class="poster-face" aria-hidden="true">
+                        <span class="poster-label">自然回响</span>
+                    </div>
+                </article>
+                <article class="poster-card" role="listitem" tabindex="0"
+                    aria-label="未来信号"
+                    data-title="未来信号"
+                    data-description="光影与数据交织成节奏，传递关于未来的无限想象。"
+                    data-image="https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&amp;fit=crop&amp;w=800&amp;q=80"
+                    style="--poster-image: url('https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80');">
+                    <div class="poster-face" aria-hidden="true">
+                        <span class="poster-label">未来信号</span>
+                    </div>
+                </article>
+                <article class="poster-card" role="listitem" tabindex="0"
+                    aria-label="复古情书"
+                    data-title="复古情书"
+                    data-description="褪色的胶片质感，记录时光深处的柔软与浪漫。"
+                    data-image="https://images.unsplash.com/photo-1526481280695-3c46977c6af7?auto=format&amp;fit=crop&amp;w=800&amp;q=80"
+                    style="--poster-image: url('https://images.unsplash.com/photo-1526481280695-3c46977c6af7?auto=format&fit=crop&w=800&q=80');">
+                    <div class="poster-face" aria-hidden="true">
+                        <span class="poster-label">复古情书</span>
+                    </div>
+                </article>
+                <article class="poster-card" role="listitem" tabindex="0"
+                    aria-label="微光剧场"
+                    data-title="微光剧场"
+                    data-description="灯光缓缓亮起，每一张海报都是一场沉浸式的开场。"
+                    data-image="https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&amp;fit=crop&amp;w=800&amp;q=80"
+                    style="--poster-image: url('https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=800&q=80');">
+                    <div class="poster-face" aria-hidden="true">
+                        <span class="poster-label">微光剧场</span>
+                    </div>
+                </article>
+            </div>
+        </section>
+        <p class="poster-footnote">提示：横向滚动或使用触控滑动浏览海报，按「Esc」可关闭展开内容</p>
+    </main>
+
+    <div class="poster-modal" aria-hidden="true" role="dialog" aria-modal="true"
+        aria-labelledby="poster-modal-title" aria-describedby="poster-modal-description">
+        <div class="poster-modal__panel">
+            <div class="poster-modal__image"></div>
+            <div class="poster-modal__content">
+                <h2 class="poster-modal__title" id="poster-modal-title">海报</h2>
+                <p class="poster-modal__description" id="poster-modal-description">精选海报介绍</p>
+            </div>
+            <button class="poster-modal__close" type="button" aria-label="关闭">×</button>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const cards = Array.from(document.querySelectorAll('.poster-card'));
+            const modal = document.querySelector('.poster-modal');
+            const modalImage = modal.querySelector('.poster-modal__image');
+            const modalTitle = modal.querySelector('.poster-modal__title');
+            const modalDescription = modal.querySelector('.poster-modal__description');
+            const modalClose = modal.querySelector('.poster-modal__close');
+            const body = document.body;
+            let lastFocusedCard = null;
+
+            function openModal(card) {
+                const title = card.dataset.title || card.getAttribute('aria-label') || '海报';
+                const description = card.dataset.description || '';
+                const image = card.dataset.image || '';
+
+                modalTitle.textContent = title;
+                modalDescription.textContent = description;
+                modalImage.style.backgroundImage = image ? `url('${image}')` : '';
+
+                modal.classList.add('is-open');
+                modal.setAttribute('aria-hidden', 'false');
+                body.classList.add('modal-open');
+
+                requestAnimationFrame(() => {
+                    modalClose.focus();
+                });
+
+                lastFocusedCard = card;
+            }
+
+            function closeModal() {
+                modal.classList.remove('is-open');
+                modal.setAttribute('aria-hidden', 'true');
+                body.classList.remove('modal-open');
+
+                if (lastFocusedCard) {
+                    lastFocusedCard.focus();
+                    lastFocusedCard = null;
+                }
+            }
+
+            cards.forEach((card) => {
+                card.addEventListener('click', () => openModal(card));
+
+                card.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openModal(card);
+                    }
+                });
+
+                card.addEventListener('focus', () => {
+                    card.scrollIntoView({
+                        behavior: 'smooth',
+                        inline: 'center',
+                        block: 'nearest'
+                    });
+                });
+            });
+
+            modalClose.addEventListener('click', closeModal);
+
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    closeModal();
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && modal.classList.contains('is-open')) {
+                    event.preventDefault();
+                    closeModal();
+                }
+            });
+        })();
+    </script>
+</body>
+
+</html>
