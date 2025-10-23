@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>海报展示</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --page-bg: radial-gradient(circle at 20% 20%, rgba(98, 134, 255, 0.25), transparent 55%),
+                radial-gradient(circle at 80% 30%, rgba(255, 142, 235, 0.24), transparent 52%),
+                radial-gradient(circle at 50% 80%, rgba(255, 188, 134, 0.2), transparent 60%),
+                linear-gradient(160deg, #101427, #040610 70%, #02030a 100%);
+            --card-width: clamp(180px, 22vw, 240px);
+            --card-radius: 22px;
+            --title-color: #f7f8ff;
+            --muted-color: rgba(244, 246, 255, 0.7);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: var(--page-bg);
+            font-family: "HarmonyOS Sans", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--title-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(32px, 6vw, 72px) clamp(20px, 5vw, 96px);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: -40vh -40vw;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.08), transparent 65%);
+            filter: blur(120px);
+            opacity: 0.5;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        main {
+            position: relative;
+            z-index: 1;
+        }
+
+        .poster-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: clamp(14px, 2vw, 28px);
+            width: min(960px, 100%);
+        }
+
+        .poster-title {
+            font-size: clamp(2.8rem, 6vw, 4.4rem);
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-indent: 0.18em;
+            text-shadow: 0 30px 60px rgba(1, 4, 18, 0.55);
+        }
+
+        .interaction-hint {
+            font-size: clamp(0.95rem, 2vw, 1.15rem);
+            color: var(--muted-color);
+            text-shadow: 0 12px 24px rgba(2, 6, 22, 0.4);
+        }
+
+        .card-stack {
+            position: relative;
+            width: min(84vw, 520px);
+            height: calc(var(--card-width) * 1.95);
+            margin-top: clamp(12px, 3vw, 30px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 1600px;
+            touch-action: pan-y;
+            user-select: none;
+        }
+
+        .card-stack::before {
+            content: "";
+            position: absolute;
+            width: 120%;
+            height: 120%;
+            max-width: 660px;
+            max-height: 660px;
+            background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.28), transparent 75%);
+            filter: blur(60px);
+            opacity: 0.5;
+            z-index: 0;
+        }
+
+        .poster-card {
+            --offset-x: 0px;
+            --offset-y: 0px;
+            --rotation: 0deg;
+            --scale: 1;
+            --card-filter: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: var(--card-width);
+            aspect-ratio: 9 / 16;
+            border-radius: var(--card-radius);
+            overflow: hidden;
+            transform-origin: 50% 100%;
+            transform: translate(calc(-50% + var(--offset-x)), calc(-88% + var(--offset-y))) rotate(var(--rotation)) scale(var(--scale));
+            background: linear-gradient(140deg, rgba(39, 54, 96, 0.85), rgba(15, 18, 28, 0.95));
+            box-shadow: 0 28px 60px rgba(5, 10, 32, 0.55);
+            transition: transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 0.5s ease, filter 0.5s ease;
+            filter: var(--card-filter, none);
+            cursor: grab;
+        }
+
+        .poster-card:focus-visible {
+            outline: 3px solid rgba(138, 174, 255, 0.7);
+            outline-offset: 6px;
+        }
+
+        .card-stack.is-dragging .poster-card {
+            transition: none;
+            cursor: grabbing;
+        }
+
+        .card-stack.has-expanded .poster-card:not(.expanded) {
+            filter: blur(3px) brightness(0.45);
+            pointer-events: none;
+        }
+
+        .poster-card.expanded {
+            transform: translate(-50%, -58%) scale(1.15);
+            box-shadow: 0 42px 100px rgba(5, 10, 32, 0.6);
+            cursor: default;
+        }
+
+        .poster-face {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .poster-face::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(4, 7, 18, 0.05) 45%, rgba(4, 7, 18, 0.7) 100%);
+            transition: opacity 0.4s ease;
+        }
+
+        .poster-card.expanded .poster-face::after {
+            opacity: 0.2;
+        }
+
+        .poster-label {
+            position: absolute;
+            left: 20px;
+            right: 20px;
+            bottom: 22px;
+            font-size: clamp(1rem, 2.6vw, 1.35rem);
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-indent: 0.12em;
+            text-align: left;
+            color: #ffffff;
+            opacity: 0.92;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            text-shadow: 0 12px 30px rgba(1, 5, 18, 0.75);
+        }
+
+        .poster-card.expanded .poster-label {
+            opacity: 0;
+        }
+
+        .poster-detail {
+            position: absolute;
+            inset: 0;
+            padding: clamp(22px, 4.5vw, 34px);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            gap: 16px;
+            background: linear-gradient(180deg, rgba(3, 6, 18, 0) 30%, rgba(3, 6, 18, 0.82) 100%);
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            pointer-events: none;
+        }
+
+        .poster-card.expanded .poster-detail {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .poster-detail h2 {
+            font-size: clamp(1.4rem, 3vw, 2rem);
+            letter-spacing: 0.1em;
+            text-indent: 0.1em;
+        }
+
+        .poster-detail p {
+            font-size: clamp(0.95rem, 2.2vw, 1.1rem);
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.82);
+        }
+
+        .detail-close {
+            position: absolute;
+            top: clamp(16px, 3vw, 24px);
+            right: clamp(16px, 3vw, 24px);
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            border: none;
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+            font-size: 1.3rem;
+            line-height: 1;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.3s ease;
+        }
+
+        .detail-close:hover,
+        .detail-close:focus-visible {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.03);
+        }
+
+        .poster-footnote {
+            margin-top: clamp(12px, 2vw, 24px);
+            font-size: clamp(0.85rem, 1.8vw, 1rem);
+            color: rgba(240, 243, 255, 0.6);
+            letter-spacing: 0.08em;
+            text-indent: 0.08em;
+        }
+
+        @media (max-width: 720px) {
+            body {
+                padding: clamp(28px, 8vw, 42px) clamp(16px, 6vw, 36px);
+            }
+
+            .poster-title {
+                letter-spacing: 0.12em;
+            }
+
+            .poster-card {
+                --card-radius: 18px;
+            }
+
+            .detail-close {
+                width: 34px;
+                height: 34px;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .card-stack {
+                width: min(92vw, 420px);
+                height: calc(var(--card-width) * 2.1);
+            }
+
+            .poster-card {
+                transform: translate(calc(-50% + var(--offset-x)), calc(-90% + var(--offset-y))) rotate(var(--rotation)) scale(var(--scale));
+            }
+
+            .poster-card.expanded {
+                transform: translate(-50%, -60%) scale(1.12);
+            }
+
+            .poster-footnote {
+                letter-spacing: 0.06em;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .poster-card,
+            .poster-card.expanded,
+            .poster-detail,
+            .detail-close {
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="poster-page">
+        <h1 class="poster-title">海报</h1>
+        <p class="interaction-hint">左右滑动扇形卡片，点击任意卡片即可抽出查看海报介绍</p>
+        <section class="card-stack" aria-label="精选海报">
+            <article class="poster-card" tabindex="0" aria-expanded="false">
+                <div class="poster-face"
+                    style="background-image: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80');">
+                </div>
+                <div class="poster-label">星际旅人</div>
+                <div class="poster-detail" aria-hidden="true">
+                    <button class="detail-close" type="button" aria-label="关闭">×</button>
+                    <h2>星际旅人</h2>
+                    <p>穿越极光，用海报讲述冒险与探索的故事。</p>
+                </div>
+            </article>
+            <article class="poster-card" tabindex="0" aria-expanded="false">
+                <div class="poster-face"
+                    style="background-image: url('https://images.unsplash.com/photo-1496302662116-2cbf3e1590af?auto=format&fit=crop&w=800&q=80');">
+                </div>
+                <div class="poster-label">城市之光</div>
+                <div class="poster-detail" aria-hidden="true">
+                    <button class="detail-close" type="button" aria-label="关闭">×</button>
+                    <h2>城市之光</h2>
+                    <p>霓虹勾勒夜色，记录城市的节奏、温度与呼吸。</p>
+                </div>
+            </article>
+            <article class="poster-card" tabindex="0" aria-expanded="false">
+                <div class="poster-face"
+                    style="background-image: url('https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=800&q=80');">
+                </div>
+                <div class="poster-label">自然回响</div>
+                <div class="poster-detail" aria-hidden="true">
+                    <button class="detail-close" type="button" aria-label="关闭">×</button>
+                    <h2>自然回响</h2>
+                    <p>森林与海洋的呼吸，为你唤醒关于自然的温柔记忆。</p>
+                </div>
+            </article>
+            <article class="poster-card" tabindex="0" aria-expanded="false">
+                <div class="poster-face"
+                    style="background-image: url('https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80');">
+                </div>
+                <div class="poster-label">未来信号</div>
+                <div class="poster-detail" aria-hidden="true">
+                    <button class="detail-close" type="button" aria-label="关闭">×</button>
+                    <h2>未来信号</h2>
+                    <p>光影与数据交织成节奏，传递关于未来的无限想象。</p>
+                </div>
+            </article>
+            <article class="poster-card" tabindex="0" aria-expanded="false">
+                <div class="poster-face"
+                    style="background-image: url('https://images.unsplash.com/photo-1526481280695-3c46977c6af7?auto=format&fit=crop&w=800&q=80');">
+                </div>
+                <div class="poster-label">复古情书</div>
+                <div class="poster-detail" aria-hidden="true">
+                    <button class="detail-close" type="button" aria-label="关闭">×</button>
+                    <h2>复古情书</h2>
+                    <p>褪色的胶片质感，记录时光深处的柔软与浪漫。</p>
+                </div>
+            </article>
+            <article class="poster-card" tabindex="0" aria-expanded="false">
+                <div class="poster-face"
+                    style="background-image: url('https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=800&q=80');">
+                </div>
+                <div class="poster-label">微光剧场</div>
+                <div class="poster-detail" aria-hidden="true">
+                    <button class="detail-close" type="button" aria-label="关闭">×</button>
+                    <h2>微光剧场</h2>
+                    <p>灯光缓缓亮起，每一张海报都是一场沉浸式的开场。</p>
+                </div>
+            </article>
+        </section>
+        <p class="poster-footnote">提示：您可以按「←」「→」键切换扇面，按「Esc」关闭展开的海报</p>
+    </main>
+    <script>
+        const stack = document.querySelector('.card-stack');
+        const cards = Array.from(stack.querySelectorAll('.poster-card'));
+        const rotationLimit = 22;
+        const angleGap = 10;
+        const offsetGap = 46;
+        const liftGap = 24;
+        const pointerState = { active: false, startX: 0, startRotation: 0, pointerId: null };
+        let rotation = 0;
+        let activeCard = null;
+        let suppressClick = false;
+
+        const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+        function updateCards() {
+            const total = cards.length;
+            const centerIndex = (total - 1) / 2;
+
+            cards.forEach((card, index) => {
+                if (card === activeCard) {
+                    card.style.setProperty('--offset-x', '0px');
+                    card.style.setProperty('--offset-y', '0px');
+                    card.style.setProperty('--rotation', '0deg');
+                    card.style.setProperty('--scale', '1.15');
+                    card.style.setProperty('--card-filter', 'none');
+                    card.style.zIndex = '800';
+                    return;
+                }
+
+                const offset = index - centerIndex;
+                const angle = clamp(offset * angleGap + rotation, -48, 48);
+                const translateX = offset * offsetGap;
+                const translateY = -Math.abs(offset) * liftGap;
+                const scale = Math.max(0.82, 1 - Math.abs(offset) * 0.06);
+                const brightness = clamp(1 - Math.abs(offset) * 0.12, 0.55, 1);
+                const saturation = clamp(1 - Math.abs(offset) * 0.06, 0.65, 1);
+
+                card.style.setProperty('--offset-x', `${translateX}px`);
+                card.style.setProperty('--offset-y', `${translateY}px`);
+                card.style.setProperty('--rotation', `${angle}deg`);
+                card.style.setProperty('--scale', scale.toFixed(3));
+                card.style.setProperty('--card-filter', `brightness(${brightness.toFixed(2)}) saturate(${saturation.toFixed(2)})`);
+                card.style.zIndex = String(400 - Math.abs(Math.round(angle)) + index);
+            });
+
+            if (activeCard) {
+                stack.classList.add('has-expanded');
+            } else {
+                stack.classList.remove('has-expanded');
+            }
+        }
+
+        function collapseCard(card = activeCard) {
+            if (!card) {
+                return;
+            }
+            card.classList.remove('expanded');
+            card.setAttribute('aria-expanded', 'false');
+            const detail = card.querySelector('.poster-detail');
+            if (detail) {
+                detail.setAttribute('aria-hidden', 'true');
+            }
+            if (card === activeCard) {
+                activeCard = null;
+            }
+            updateCards();
+        }
+
+        function expandCard(card) {
+            if (card === activeCard) {
+                collapseCard(card);
+                return;
+            }
+
+            if (activeCard) {
+                collapseCard(activeCard);
+            }
+
+            activeCard = card;
+            card.classList.add('expanded');
+            card.setAttribute('aria-expanded', 'true');
+            const detail = card.querySelector('.poster-detail');
+            if (detail) {
+                detail.setAttribute('aria-hidden', 'false');
+            }
+            updateCards();
+        }
+
+        stack.addEventListener('pointerdown', (event) => {
+            if (activeCard) {
+                return;
+            }
+            pointerState.active = true;
+            pointerState.startX = event.clientX;
+            pointerState.startRotation = rotation;
+            pointerState.pointerId = event.pointerId;
+            suppressClick = false;
+            stack.classList.add('is-dragging');
+            stack.setPointerCapture(event.pointerId);
+        });
+
+        stack.addEventListener('pointermove', (event) => {
+            if (!pointerState.active) {
+                return;
+            }
+            const deltaX = event.clientX - pointerState.startX;
+            if (Math.abs(deltaX) > 6) {
+                suppressClick = true;
+            }
+            rotation = clamp(pointerState.startRotation + deltaX * 0.12, -rotationLimit, rotationLimit);
+            updateCards();
+        });
+
+        const endPointer = (event) => {
+            if (!pointerState.active) {
+                return;
+            }
+            pointerState.active = false;
+            stack.classList.remove('is-dragging');
+            try {
+                stack.releasePointerCapture(event.pointerId);
+            } catch (error) {
+            }
+        };
+
+        stack.addEventListener('pointerup', endPointer);
+        stack.addEventListener('pointercancel', endPointer);
+        stack.addEventListener('pointerleave', (event) => {
+            if (!pointerState.active) {
+                return;
+            }
+            endPointer(event);
+        });
+
+        cards.forEach((card) => {
+            const detail = card.querySelector('.poster-detail');
+            if (detail) {
+                detail.setAttribute('aria-hidden', 'true');
+            }
+
+            card.addEventListener('click', (event) => {
+                if (suppressClick) {
+                    suppressClick = false;
+                    return;
+                }
+                expandCard(card);
+            });
+
+            card.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    expandCard(card);
+                }
+                if (event.key === 'Escape' && card.classList.contains('expanded')) {
+                    event.preventDefault();
+                    collapseCard(card);
+                }
+            });
+
+            const closeButton = card.querySelector('.detail-close');
+            if (closeButton) {
+                closeButton.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    collapseCard(card);
+                });
+            }
+        });
+
+        stack.addEventListener('click', (event) => {
+            if (!activeCard) {
+                return;
+            }
+            if (!event.target.closest('.poster-card.expanded')) {
+                collapseCard();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && activeCard) {
+                collapseCard();
+                return;
+            }
+            if (activeCard) {
+                return;
+            }
+            if (event.key === 'ArrowLeft') {
+                rotation = clamp(rotation - angleGap, -rotationLimit, rotationLimit);
+                updateCards();
+            }
+            if (event.key === 'ArrowRight') {
+                rotation = clamp(rotation + angleGap, -rotationLimit, rotationLimit);
+                updateCards();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            requestAnimationFrame(updateCards);
+        });
+
+        updateCards();
+    </script>
+</body>
+
+</html>
